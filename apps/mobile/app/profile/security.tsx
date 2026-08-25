@@ -10,6 +10,7 @@ import {
   Modal,
   Alert,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
@@ -98,7 +99,10 @@ export default function SecurityScreen() {
         {
           text: 'Supprimer',
           style: 'destructive',
-          onPress: () => router.replace('/auth/login'),
+          onPress: () => {
+            Alert.alert('Compte supprimé', 'Votre demande de suppression a bien été prise en compte.');
+            router.replace('/auth/login');
+          },
         },
       ],
     );
@@ -106,9 +110,9 @@ export default function SecurityScreen() {
 
   return (
     <View style={styles.screen}>
-      {/* ── Header ── */}
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, 14) }]}>
-        <View style={styles.topRow}>
+      {/* ── 1. HEADER JAUNE OPTIMAL UNIFIÉ ── */}
+      <View style={[styles.yellowHeader, { paddingTop: Math.max(insets.top, 14) }]}>
+        <View style={styles.topBar}>
           <Pressable
             style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
             onPress={() => router.back()}
@@ -117,8 +121,23 @@ export default function SecurityScreen() {
           >
             <ArrowLeft size={22} color="#111111" weight="bold" />
           </Pressable>
+
+          <View style={styles.largeFaviconCircle}>
+            <Image
+              source={require('../../assets/favicon.jpg')}
+              style={styles.largeFaviconImage}
+              contentFit="contain"
+              transition={150}
+              cachePolicy="memory-disk"
+            />
+          </View>
+        </View>
+
+        <View style={styles.headerTitleWrap}>
           <Text style={styles.headerTitle}>Sécurité & Confidentialité</Text>
-          <View style={{ width: 42 }} />
+          <Text style={styles.headerSubtitle}>
+            Protégez votre compte, vos accès et vos données.
+          </Text>
         </View>
       </View>
 
@@ -352,36 +371,70 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F3',
   },
-  header: {
-    backgroundColor: authColors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEC',
-    paddingHorizontal: 16,
-    paddingBottom: 14,
+
+  // 1. Header Jaune Optimal Unifié
+  yellowHeader: {
+    backgroundColor: authColors.yellow,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
   },
-  topRow: {
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 16,
   },
   backBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#F5F5F3',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E8E8E4',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111111',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   btnPressed: {
-    opacity: 0.84,
+    opacity: 0.88,
     transform: [{ scale: 0.98 }],
+  },
+  largeFaviconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  largeFaviconImage: {
+    width: '100%',
+    height: '100%',
+  },
+  headerTitleWrap: {
+    gap: 4,
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#111111',
+    letterSpacing: -0.5,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#444440',
+    lineHeight: 19,
   },
 
   scrollView: {

@@ -68,7 +68,7 @@ export default function ProfileScreen() {
           <View style={styles.topBar}>
             <Pressable
               style={styles.notifButton}
-              onPress={() => router.push('/profile/preferences')}
+              onPress={() => router.push('/notifications')}
               accessibilityLabel="Notifications"
               hitSlop={10}
             >
@@ -113,12 +113,12 @@ export default function ProfileScreen() {
                 <Text style={styles.profilePhone}>{phone}</Text>
               </View>
 
-              <View style={[styles.verifiedPill, !isKycVerified && styles.unverifiedPill]}>
-                <ShieldCheck size={14} color={isKycVerified ? '#10B981' : '#D97706'} weight="fill" />
-                <Text style={[styles.verifiedPillText, !isKycVerified && styles.unverifiedPillText]}>
-                  {isKycVerified ? 'Vérifié' : 'Niveau 1'}
-                </Text>
-              </View>
+              {isKycVerified && (
+                <View style={styles.verifiedPill}>
+                  <ShieldCheck size={14} color="#10B981" weight="fill" />
+                  <Text style={styles.verifiedPillText}>Vérifié</Text>
+                </View>
+              )}
             </View>
 
             <View style={styles.profileDivider} />

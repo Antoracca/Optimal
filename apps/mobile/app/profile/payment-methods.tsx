@@ -9,6 +9,7 @@ import {
   Modal,
   Alert,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
@@ -120,9 +121,10 @@ export default function PaymentMethodsScreen() {
 
   return (
     <View style={styles.screen}>
-      {/* ── Header ── */}
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, 14) }]}>
-        <View style={styles.topRow}>
+      {/* ── 1. HEADER JAUNE OPTIMAL UNIFIÉ ── */}
+      <View style={[styles.yellowHeader, { paddingTop: Math.max(insets.top, 14) }]}>
+        {/* Top Bar : Bouton retour blanc à gauche + Favicon à droite */}
+        <View style={styles.topBar}>
           <Pressable
             style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
             onPress={() => router.back()}
@@ -131,49 +133,57 @@ export default function PaymentMethodsScreen() {
           >
             <ArrowLeft size={22} color="#111111" weight="bold" />
           </Pressable>
-          <Text style={styles.headerTitle}>Moyens de paiement</Text>
-          <View style={{ width: 42 }} />
+
+          <View style={styles.largeFaviconCircle}>
+            <Image
+              source={require('../../assets/favicon.jpg')}
+              style={styles.largeFaviconImage}
+              contentFit="contain"
+              transition={150}
+              cachePolicy="memory-disk"
+            />
+          </View>
         </View>
 
-        {/* ── Onglets Filtrage ── */}
-        <View style={styles.tabsRow}>
-          <Pressable
-            style={[styles.tabBtn, activeTab === 'cards' && styles.tabBtnActive]}
-            onPress={() => setActiveTab('cards')}
-          >
-            <CreditCard size={17} color={activeTab === 'cards' ? '#111111' : '#7E7E78'} weight={activeTab === 'cards' ? 'bold' : 'regular'} />
-            <Text style={[styles.tabText, activeTab === 'cards' && styles.tabTextActive]}>
-              Cartes ({savedCards.length})
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={[styles.tabBtn, activeTab === 'momo' && styles.tabBtnActive]}
-            onPress={() => setActiveTab('momo')}
-          >
-            <DeviceMobile size={17} color={activeTab === 'momo' ? '#111111' : '#7E7E78'} weight={activeTab === 'momo' ? 'bold' : 'regular'} />
-            <Text style={[styles.tabText, activeTab === 'momo' && styles.tabTextActive]}>
-              Mobile Money ({savedMobileMoney.length})
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={[styles.tabBtn, activeTab === 'bank' && styles.tabBtnActive]}
-            onPress={() => setActiveTab('bank')}
-          >
-            <Bank size={17} color={activeTab === 'bank' ? '#111111' : '#7E7E78'} weight={activeTab === 'bank' ? 'bold' : 'regular'} />
-            <Text style={[styles.tabText, activeTab === 'bank' && styles.tabTextActive]}>
-              Banque ({savedBankAccounts.length})
-            </Text>
-          </Pressable>
+        {/* Titre & Sous-titre */}
+        <View style={styles.headerTitleWrap}>
+          <Text style={styles.headerTitle}>Moyens de paiement</Text>
+          <Text style={styles.headerSubtitle}>
+            Gérez vos cartes bancaires, comptes et portefeuilles.
+          </Text>
         </View>
       </View>
 
+      {/* ── 2. CORPS DÉROULANT : FILTRES ÉPURÉS + CONTENU ── */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Filtres de statut épurés (identiques à Historique & Bénéficiaires) */}
+        <View style={styles.filterRow}>
+          {(
+            [
+              { id: 'cards', label: `Cartes (${savedCards.length})` },
+              { id: 'momo', label: `Mobile Money (${savedMobileMoney.length})` },
+              { id: 'bank', label: `Banque (${savedBankAccounts.length})` },
+            ] as const
+          ).map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <Pressable
+                key={tab.id}
+                style={[styles.filterChip, isActive && styles.filterChipActive]}
+                onPress={() => setActiveTab(tab.id)}
+              >
+                <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                  {tab.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
         {/* ── 1. ONGLET CARTES BANCAIRES ── */}
         {activeTab === 'cards' && (
           <View style={styles.tabContent}>
@@ -355,10 +365,10 @@ export default function PaymentMethodsScreen() {
                 <TextInput
                   style={styles.modalInput}
                   placeholder="4532 •••• •••• ••••"
-                  value={cardNum}
-                  onChangeText={setCardNum}
                   keyboardType="numeric"
                   maxLength={19}
+                  value={cardNum}
+                  onChangeText={setCardNum}
                 />
               </View>
 
@@ -366,36 +376,43 @@ export default function PaymentMethodsScreen() {
                 <Text style={styles.fieldLabel}>Nom sur la carte</Text>
                 <TextInput
                   style={styles.modalInput}
-                  placeholder="NOM PRÉNOM"
+                  placeholder="EX: MOHAMED ALAMI"
+                  autoCapitalize="characters"
                   value={cardHolder}
                   onChangeText={setCardHolder}
-                  autoCapitalize="characters"
                 />
               </View>
 
-              <View style={styles.rowTwoFields}>
+              <View style={styles.formRow}>
                 <View style={[styles.fieldGroup, { flex: 1 }]}>
-                  <Text style={styles.fieldLabel}>Date d'expiration</Text>
+                  <Text style={styles.fieldLabel}>Expiration (MM/AA)</Text>
                   <TextInput
                     style={styles.modalInput}
-                    placeholder="MM/AA"
+                    placeholder="12/28"
+                    maxLength={5}
                     value={cardExpiry}
                     onChangeText={setCardExpiry}
-                    maxLength={5}
                   />
                 </View>
                 <View style={[styles.fieldGroup, { flex: 1 }]}>
-                  <Text style={styles.fieldLabel}>CVV</Text>
+                  <Text style={styles.fieldLabel}>CVV / CVC</Text>
                   <TextInput
                     style={styles.modalInput}
                     placeholder="123"
-                    value={cardCvv}
-                    onChangeText={setCardCvv}
                     keyboardType="numeric"
                     maxLength={4}
                     secureTextEntry
+                    value={cardCvv}
+                    onChangeText={setCardCvv}
                   />
                 </View>
+              </View>
+
+              <View style={styles.securityNoteRow}>
+                <ShieldCheck size={16} color="#10B981" weight="fill" />
+                <Text style={styles.securityNoteText}>
+                  Données chiffrées de bout en bout et conformes aux normes PCI-DSS.
+                </Text>
               </View>
             </View>
 
@@ -406,7 +423,7 @@ export default function PaymentMethodsScreen() {
         </View>
       </Modal>
 
-      {/* ── MODAL : LIER MOBILE MONEY ── */}
+      {/* ── MODAL : AJOUT MOBILE MONEY ── */}
       <Modal visible={showAddMomoModal} transparent animationType="slide">
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
@@ -418,34 +435,30 @@ export default function PaymentMethodsScreen() {
             </View>
 
             <View style={styles.modalForm}>
-              {/* Choix Opérateur */}
-              <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Opérateur réseau</Text>
-                <View style={styles.operatorRow}>
-                  {(['airtel', 'moov', 'mtn', 'orange'] as const).map((op) => (
-                    <Pressable
-                      key={op}
-                      style={[
-                        styles.operatorSelectBtn,
-                        momoOperator === op && styles.operatorSelectBtnActive,
-                      ]}
-                      onPress={() => setMomoOperator(op)}
-                    >
-                      <OperatorLogo id={op} size={28} />
-                      <Text style={styles.operatorSelectText}>{op.toUpperCase()}</Text>
-                    </Pressable>
-                  ))}
-                </View>
+              <Text style={styles.fieldLabel}>Opérateur</Text>
+              <View style={styles.operatorSelectRow}>
+                {(['airtel', 'moov', 'mtn', 'orange'] as const).map((op) => (
+                  <Pressable
+                    key={op}
+                    style={[styles.operatorChip, momoOperator === op && styles.operatorChipActive]}
+                    onPress={() => setMomoOperator(op)}
+                  >
+                    <OperatorLogo id={op} size={28} />
+                    <Text style={[styles.operatorChipText, momoOperator === op && styles.operatorChipTextActive]}>
+                      {op.toUpperCase()}
+                    </Text>
+                  </Pressable>
+                ))}
               </View>
 
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Numéro de téléphone Mobile Money</Text>
+                <Text style={styles.fieldLabel}>Numéro de téléphone lié</Text>
                 <TextInput
                   style={styles.modalInput}
-                  placeholder="+241 062 12 34 56"
+                  placeholder="+241 07 00 00 00"
+                  keyboardType="phone-pad"
                   value={momoPhone}
                   onChangeText={setMomoPhone}
-                  keyboardType="phone-pad"
                 />
               </View>
 
@@ -453,7 +466,7 @@ export default function PaymentMethodsScreen() {
                 <Text style={styles.fieldLabel}>Nom complet du titulaire</Text>
                 <TextInput
                   style={styles.modalInput}
-                  placeholder="Nom complet tel qu'enregistré chez l'opérateur"
+                  placeholder="Nom tel qu'enregistré chez l'opérateur"
                   value={momoName}
                   onChangeText={setMomoName}
                 />
@@ -461,18 +474,18 @@ export default function PaymentMethodsScreen() {
             </View>
 
             <Pressable style={styles.modalSaveBtn} onPress={handleSaveMomo}>
-              <Text style={styles.modalSaveBtnText}>Lier le compte</Text>
+              <Text style={styles.modalSaveBtnText}>Lier ce compte</Text>
             </Pressable>
           </View>
         </View>
       </Modal>
 
-      {/* ── MODAL : AJOUT COMPTE BANCAIRE ── */}
+      {/* ── MODAL : AJOUT COMPTE BANCAIRE (RIB) ── */}
       <Modal visible={showAddBankModal} transparent animationType="slide">
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Nouveau compte bancaire</Text>
+              <Text style={styles.modalTitle}>Ajouter un compte bancaire</Text>
               <Pressable onPress={() => setShowAddBankModal(false)} hitSlop={10}>
                 <X size={22} color="#111111" weight="bold" />
               </Pressable>
@@ -483,20 +496,20 @@ export default function PaymentMethodsScreen() {
                 <Text style={styles.fieldLabel}>Nom de la Banque</Text>
                 <TextInput
                   style={styles.modalInput}
-                  placeholder="Ex: Attijariwafa Bank, BGFIBank, CIH..."
+                  placeholder="Ex: CIH Bank, Attijariwafa, BGFI, BGFIBank..."
                   value={bankName}
                   onChangeText={setBankName}
                 />
               </View>
 
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Numéro de compte / RIB / IBAN</Text>
+                <Text style={styles.fieldLabel}>Numéro de compte / IBAN / RIB (24 chiffres)</Text>
                 <TextInput
                   style={styles.modalInput}
-                  placeholder="MA64 0077 8800 •••• ••••"
+                  placeholder="MA64 0000 0000 0000 0000 0000"
+                  autoCapitalize="characters"
                   value={iban}
                   onChangeText={setIban}
-                  autoCapitalize="characters"
                 />
               </View>
 
@@ -526,180 +539,200 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F3',
   },
-  header: {
-    backgroundColor: authColors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEC',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    gap: 12,
+
+  // 1. Header Jaune Optimal Unifié
+  yellowHeader: {
+    backgroundColor: authColors.yellow,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
   },
-  topRow: {
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 16,
   },
   backBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#F5F5F3',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E8E8E4',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111111',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   btnPressed: {
-    opacity: 0.84,
+    opacity: 0.88,
     transform: [{ scale: 0.98 }],
   },
-
-  tabsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  tabBtn: {
-    flex: 1,
-    flexDirection: 'row',
+  largeFaviconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: '#F5F5F3',
-    borderWidth: 1,
-    borderColor: '#E8E8E4',
+    overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  tabBtnActive: {
-    backgroundColor: authColors.yellow,
-    borderColor: authColors.yellow,
+  largeFaviconImage: {
+    width: '100%',
+    height: '100%',
   },
-  tabText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#7E7E78',
+  headerTitleWrap: {
+    gap: 4,
   },
-  tabTextActive: {
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: '900',
     color: '#111111',
-    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#444440',
+    lineHeight: 19,
   },
 
+  // 2. Corps & Filtres
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16,
     paddingBottom: 40,
+    gap: 16,
   },
+
+  // Filtres de type Historique
+  filterRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  filterChip: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#EEEEEC',
+  },
+  filterChipActive: {
+    backgroundColor: '#111111',
+    borderColor: '#111111',
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6E6E68',
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+
   tabContent: {
     gap: 16,
   },
 
+  // Empty State Card
   emptyCard: {
-    backgroundColor: authColors.white,
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    padding: 24,
+    padding: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    gap: 10,
     borderWidth: 1,
     borderColor: '#EEEEEC',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-    marginTop: 20,
   },
   emptyIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: '#F5F5F3',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
   },
   emptyTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '800',
     color: '#111111',
   },
   emptyDesc: {
-    fontSize: 13.5,
-    lineHeight: 19,
+    fontSize: 13,
     fontWeight: '500',
-    color: '#7E7E78',
+    color: '#767670',
     textAlign: 'center',
-    paddingHorizontal: 8,
+    lineHeight: 18,
+    maxWidth: 290,
   },
   addPrimaryBtn: {
     backgroundColor: authColors.yellow,
-    borderRadius: 24,
-    height: 48,
+    borderRadius: 14,
+    paddingVertical: 12,
     paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     marginTop: 8,
-    shadowColor: authColors.yellow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 3,
   },
   addPrimaryBtnText: {
-    fontSize: 14.5,
-    fontWeight: '900',
+    fontSize: 14,
+    fontWeight: '800',
     color: '#111111',
   },
 
+  // Liste d'éléments enregistrés
   itemsList: {
-    gap: 12,
+    gap: 10,
   },
   itemCard: {
-    backgroundColor: authColors.white,
-    borderRadius: 18,
-    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
     borderColor: '#EEEEEC',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 2,
   },
   itemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 12,
     flex: 1,
   },
   cardIconBox: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FAF9F5',
+    borderRadius: 12,
+    backgroundColor: '#F5F5F3',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#EFEFEA',
   },
   itemTexts: {
+    gap: 2,
     flex: 1,
-    gap: 3,
   },
   itemTitle: {
-    fontSize: 15.5,
+    fontSize: 15,
     fontWeight: '800',
     color: '#111111',
   },
@@ -716,23 +749,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   addSecondaryBtn: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    height: 50,
-    borderWidth: 1.5,
-    borderColor: '#E8E8E4',
-    borderStyle: 'dashed',
+    borderRadius: 16,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    borderWidth: 1,
+    borderColor: '#EEEEEC',
+    borderStyle: 'dashed',
     marginTop: 4,
   },
   addSecondaryBtnText: {
-    fontSize: 14.5,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
     color: '#111111',
   },
 
@@ -747,6 +780,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     padding: 24,
+    paddingBottom: 36,
     gap: 18,
   },
   modalHeader: {
@@ -756,7 +790,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: '800',
     color: '#111111',
   },
   modalForm: {
@@ -768,62 +802,78 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#6E6E68',
+    color: '#333330',
   },
   modalInput: {
-    height: 52,
-    backgroundColor: '#FAFAF8',
+    backgroundColor: '#F5F5F3',
     borderRadius: 14,
-    borderWidth: 1.2,
-    borderColor: '#E8E8E4',
     paddingHorizontal: 14,
-    fontSize: 15,
+    paddingVertical: 12,
+    fontSize: 14.5,
     fontWeight: '600',
     color: '#111111',
+    borderWidth: 1,
+    borderColor: '#EEEEEC',
   },
-  rowTwoFields: {
+  formRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
-  operatorRow: {
+  securityNoteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#F0FDF4',
+    padding: 10,
+    borderRadius: 12,
+  },
+  securityNoteText: {
+    fontSize: 12,
+    color: '#15803D',
+    fontWeight: '500',
+    flex: 1,
+  },
+  operatorSelectRow: {
     flexDirection: 'row',
     gap: 8,
   },
-  operatorSelectBtn: {
+  operatorChip: {
     flex: 1,
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: '#FAFAF8',
-    borderWidth: 1.5,
-    borderColor: '#E8E8E4',
-    gap: 4,
-  },
-  operatorSelectBtnActive: {
-    borderColor: '#111111',
-    backgroundColor: '#FFFFFF',
-  },
-  operatorSelectText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#111111',
-  },
-  modalSaveBtn: {
-    height: 52,
-    backgroundColor: authColors.yellow,
-    borderRadius: 26,
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
-    shadowColor: authColors.yellow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 3,
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: '#F5F5F3',
+    borderWidth: 1,
+    borderColor: '#EEEEEC',
+  },
+  operatorChipActive: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#111111',
+    borderWidth: 1.5,
+  },
+  operatorChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#767670',
+  },
+  operatorChipTextActive: {
+    color: '#111111',
+    fontWeight: '800',
+  },
+  modalSaveBtn: {
+    backgroundColor: authColors.yellow,
+    borderRadius: 16,
+    paddingVertical: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
   },
   modalSaveBtnText: {
-    fontSize: 16,
-    fontWeight: '900',
+    fontSize: 15,
+    fontWeight: '800',
     color: '#111111',
   },
 });

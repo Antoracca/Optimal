@@ -159,8 +159,8 @@ export const useUserSettingsStore = create<UserSettingsState>((set, get) => ({
     }),
   isRelayFavorite: (relayId) => get().favoriteRelayIds.includes(relayId),
 
-  // Sécurité
-  biometricsEnabled: true,
+  // Sécurité (Désactivé par défaut)
+  biometricsEnabled: false,
   pinCode: null,
   twoFactorEnabled: false,
   toggleBiometrics: (enabled) => set({ biometricsEnabled: enabled }),
