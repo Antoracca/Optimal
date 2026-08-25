@@ -1,0 +1,44 @@
+{
+  "name": "@optimal/mobile",
+  "version": "1.0.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "npx expo start",
+    "android": "npx expo start --android",
+    "ios": "npx expo start --ios",
+    "web": "npx expo start --web"
+  },
+  "dependencies": {
+    "@expo/metro-runtime": "~57.0.12",
+    "@o.halabi/react-native-country-picker-modal": "^2.0.1",
+    "@optimal/shared": "workspace:*",
+    "expo": "~57.0.15",
+    "expo-apple-authentication": "^57.0.1",
+    "expo-asset": "~57.0.14",
+    "expo-constants": "~57.0.13",
+    "expo-font": "~57.0.1",
+    "expo-image": "~57.0.3",
+    "expo-linking": "~57.0.7",
+    "expo-localization": "~57.0.1",
+    "expo-location": "~57.0.12",
+    "expo-router": "~57.0.15",
+    "expo-splash-screen": "~57.0.7",
+    "expo-status-bar": "~57.0.1",
+    "expo-video": "~57.0.2",
+    "lottie-react-native": "^7.5.0",
+    "phosphor-react-native": "^2.0.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.2",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
+    "react-native-svg": "15.15.4",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.20.0",
+    "@types/react": "~19.2.4",
+    "typescript": "~5.9.2"
+  }
+}

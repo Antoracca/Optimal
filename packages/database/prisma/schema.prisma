@@ -1,0 +1,399 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ----------------------------------------------------
+// 1. UTILISATEURS & AUTHENTIFICATION
+// ----------------------------------------------------
+
+enum Role {
+  CLIENT
+  AGENT_RELAIS
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum KycTier {
+  TIER_0
+  TIER_1
+  TIER_2
+}
+
+enum KycStatus {
+  PENDING
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id                String          @id @default(uuid())
+  phoneNumber       String          @unique
+  email             String?         @unique
+  passwordHash      String
+  fullName          String
+  countryCode       String          // GA, CM, CF, CD, MA
+  role              Role            @default(CLIENT)
+  kycTier           KycTier         @default(TIER_0)
+  isBlocked         Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  kycVerifications  KycVerification[]
+  recipients        Recipient[]
+  transfersSent     Transfer[]      @relation("SentTransfers")
+  agentPickups      CashPickupVoucher[] @relation("AgentPickups")
+  auditLogs         AuditLog[]
+  refreshTokens     RefreshToken[]
+
+  @@index([phoneNumber])
+  @@index([role])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  userAgent String?
+  ipAddress String?
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model KycVerification {
+  id              String      @id @default(uuid())
+  userId          String
+  documentType    String      // PASSPORT, NATIONAL_ID, RESIDENCE_PERMIT
+  documentNumber  String
+  documentUrl     String      // URL S3 chiffrée
+  selfieUrl       String?
+  status          KycStatus   @default(PENDING)
+  reviewedBy      String?
+  rejectionReason String?
+  reviewedAt      DateTime?
+  createdAt       DateTime    @default(now())
+
+  user            User        @relation(fields: [userId], references: [id])
+
+  @@index([userId, status])
+}
+
+// ----------------------------------------------------
+// 2. BÉNÉFICIAIRES AU MAROC
+// ----------------------------------------------------
+
+enum DeliveryMethod {
+  BANK_TRANSFER
+  CASH_PICKUP
+}
+
+model Recipient {
+  id              String          @id @default(uuid())
+  userId          String
+  fullName        String
+  phoneNumber     String          // Format marocain (+212...)
+  deliveryMethod  DeliveryMethod
+  bankName        String?         // Attijariwafa, BCP, CIH, BMCE, etc.
+  bankRib         String?         // RIB marocain chiffré côté applicatif (AES-256-GCM)
+  city            String?         // Casablanca, Rabat, Marrakech, etc.
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  user            User            @relation(fields: [userId], references: [id])
+  transfers       Transfer[]
+
+  @@index([userId])
+}
+
+// ----------------------------------------------------
+// 3. TAUX DE CHANGE, COMMISSIONS & POOLS DE LIQUIDITÉ
+// ----------------------------------------------------
+
+model ExchangeRate {
+  id              String      @id @default(uuid())
+  fromCurrency    String      // XAF, CDF
+  toCurrency      String      // MAD
+  marketRate      Decimal     @db.Decimal(18, 6)
+  appliedRate     Decimal     @db.Decimal(18, 6) // Taux avec spread
+  spreadPercent   Decimal     @db.Decimal(5, 2)  // Ex: 1.5%
+  isActive        Boolean     @default(true)
+  updatedBy       String
+  updatedAt       DateTime    @updatedAt
+
+  @@unique([fromCurrency, toCurrency])
+}
+
+model FeeConfiguration {
+  id              String          @id @default(uuid())
+  countryCode     String          // GA, CM, CF, CD
+  deliveryMethod  DeliveryMethod
+  minAmount       Decimal         @db.Decimal(18, 2)
+  maxAmount       Decimal         @db.Decimal(18, 2)
+  fixedFee        Decimal         @db.Decimal(18, 2) @default(0)
+  percentFee      Decimal         @db.Decimal(5, 2)  @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model LiquidityPool {
+  id                String      @id @default(uuid())
+  countryCode       String      // GA, CM, CD, CF, MA
+  currency          String      // XAF, CDF, MAD
+  availableBalance  Decimal     @db.Decimal(18, 2)
+  reservedBalance   Decimal     @db.Decimal(18, 2) @default(0)
+  alertThreshold    Decimal     @db.Decimal(18, 2)
+  updatedAt         DateTime    @updatedAt
+
+  @@unique([countryCode, currency])
+}
+
+// ----------------------------------------------------
+// 4. TRANSACTIONS & MACHINE D'ÉTATS
+// ----------------------------------------------------
+
+enum TransferStatus {
+  CREATED
+  PAYMENT_PENDING
+  PAYMENT_CONFIRMED
+  PROCESSING
+  PAYOUT_PENDING
+  PAYOUT_COMPLETED
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  AIRTEL_MONEY
+  ORANGE_MONEY
+  MTN_MOMO
+  MANUAL_COMMERCIAL
+}
+
+enum PayoutProvider {
+  CHARI_BAAS
+  ASLAN
+  CASH_PICKUP_DESK
+}
+
+enum PayoutStatus {
+  CREATED
+  SUBMITTING
+  PENDING
+  COMPLETED
+  FAILED
+  UNKNOWN
+  REVERSED
+}
+
+model Transfer {
+  id                  String          @id @default(uuid())
+  reference           String          @unique // Ex: OPT-2026-X892J
+  idempotencyKey      String          @unique
+  idempotencyFingerprint String
+  senderId            String
+  recipientId         String
+  
+  // Montants & Devises
+  sendCountry         String          // GA, CM, CD, CF
+  sendCurrency        String          // XAF, CDF
+  sendAmount          Decimal         @db.Decimal(18, 2)
+  feeAmount           Decimal         @db.Decimal(18, 2)
+  totalCharged        Decimal         @db.Decimal(18, 2) // sendAmount + feeAmount
+  
+  receiveCurrency     String          @default("MAD")
+  receiveAmount       Decimal         @db.Decimal(18, 2)
+  appliedExchangeRate Decimal         @db.Decimal(18, 6)
+  
+  deliveryMethod      DeliveryMethod
+  status              TransferStatus  @default(CREATED)
+  failureReason       String?
+  rateLockedUntil     DateTime
+  
+  paymentProvider     PaymentProvider
+  payoutProvider      PayoutProvider
+  
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  version             Int             @default(0)
+
+  sender              User            @relation("SentTransfers", fields: [senderId], references: [id])
+  recipient           Recipient       @relation(fields: [recipientId], references: [id])
+  paymentIntent       PaymentIntent?
+  payoutIntent        PayoutIntent?
+  cashPickupVoucher   CashPickupVoucher?
+
+  @@index([senderId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ----------------------------------------------------
+// 5. INTENTS DE COLLECTE & DÉCAISSEMENT
+// ----------------------------------------------------
+
+model PaymentIntent {
+  id                    String          @id @default(uuid())
+  transferId            String          @unique
+  provider              PaymentProvider
+  providerTransactionId String?         @unique
+  payerPhoneNumber      String
+  amount                Decimal         @db.Decimal(18, 2)
+  currency              String
+  status                String          // PENDING, SUCCESS, FAILED
+  rawRequestPayload     Json?
+  rawWebhookPayload     Json?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  transfer              Transfer        @relation(fields: [transferId], references: [id])
+}
+
+model PayoutIntent {
+  id                  String          @id @default(uuid())
+  transferId          String          @unique
+  provider            PayoutProvider
+  providerBatchId     String?
+  providerTransferId  String?         @unique
+  idempotencyKey      String          @unique
+  beneficiaryRib      String          // chiffré côté applicatif
+  amountMad           Decimal         @db.Decimal(18, 2)
+  status              PayoutStatus    @default(CREATED)
+  rawWebhookPayload   Json?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  transfer            Transfer        @relation(fields: [transferId], references: [id])
+
+  @@index([status, createdAt])
+}
+
+model CashPickupVoucher {
+  id                String      @id @default(uuid())
+  transferId        String      @unique
+  pickupCodeHash    String      // Hash du code OTP à 6 chiffres
+  pickupCodeEncrypted String    // remis uniquement par le worker de notification autorisé
+  qrCodeToken       String      @unique
+  pointRelaisCity   String      // Casablanca, Rabat, etc.
+  isClaimed         Boolean     @default(false)
+  claimedAt         DateTime?
+  claimedByAgentId  String?
+  expiresAt         DateTime
+  failedAttempts    Int         @default(0)
+  createdAt         DateTime    @default(now())
+
+  transfer          Transfer    @relation(fields: [transferId], references: [id])
+  agent             User?       @relation("AgentPickups", fields: [claimedByAgentId], references: [id])
+}
+
+// ----------------------------------------------------
+// 6. REGISTRE COMPTABLE EN PARTIE DOUBLE (LEDGER)
+// ----------------------------------------------------
+
+enum AccountType {
+  ASSET       // Comptes opérateurs & Banques
+  LIABILITY   // Dettes envers les clients / bénéficiaires
+  EQUITY      // Fonds propres
+  REVENUE     // Commissions & Marges de change
+  EXPENSE     // Frais d'APIs & Opérateurs
+}
+
+model Account {
+  id            String          @id @default(uuid())
+  code          String          @unique // Ex: 1010-GABON-AIRTEL, 1020-MAROC-CHARI, 7010-COMMISSIONS
+  name          String
+  type          AccountType
+  currency      String          // XAF, CDF, MAD
+  balance       Decimal         @db.Decimal(18, 2) @default(0)
+  createdAt     DateTime        @default(now())
+  
+  debitEntries  LedgerEntry[]   @relation("DebitAccount")
+  creditEntries LedgerEntry[]   @relation("CreditAccount")
+}
+
+model LedgerEntry {
+  id              String      @id @default(uuid())
+  transactionRef  String      // Référence du Transfert ou Rechargement
+  operationKey    String      @unique
+  debitAccountId  String
+  creditAccountId String
+  amount          Decimal     @db.Decimal(18, 2)
+  currency        String
+  description     String
+  createdAt       DateTime    @default(now())
+
+  debitAccount    Account     @relation("DebitAccount", fields: [debitAccountId], references: [id])
+  creditAccount   Account     @relation("CreditAccount", fields: [creditAccountId], references: [id])
+
+  @@index([transactionRef])
+}
+
+model WebhookEvent {
+  id              String   @id @default(uuid())
+  provider        String
+  externalEventId String
+  eventType       String
+  payload         Json
+  signature       String?
+  receivedAt      DateTime @default(now())
+  processedAt     DateTime?
+  status          String   @default("RECEIVED")
+  errorMessage    String?
+
+  @@unique([provider, externalEventId])
+  @@index([status, receivedAt])
+}
+
+model OutboxEvent {
+  id          String   @id @default(uuid())
+  topic       String
+  aggregateId String
+  payload     Json
+  createdAt   DateTime @default(now())
+  publishedAt DateTime?
+  attempts    Int      @default(0)
+  lastError   String?
+
+  @@index([publishedAt, createdAt])
+}
+
+model ReconciliationRun {
+  id          String   @id @default(uuid())
+  provider    String
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  status      String   @default("PENDING")
+  summary     Json?
+}
+
+// ----------------------------------------------------
+// 7. AUDIT TRAIL & LOGS IMMUABLES
+// ----------------------------------------------------
+
+model AuditLog {
+  id          String      @id @default(uuid())
+  userId      String?
+  action      String      // EX: LOGIN, INITIATE_TRANSFER, APPROVE_KYC, UPDATE_FX_RATE
+  entity      String      // EX: Transfer, User, LiquidityPool
+  entityId    String?
+  ipAddress   String?
+  userAgent   String?
+  details     Json?
+  createdAt   DateTime    @default(now())
+
+  user        User?       @relation(fields: [userId], references: [id])
+
+  @@index([action])
+  @@index([createdAt])
+}

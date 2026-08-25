@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Optimal",
+    "slug": "optimal",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.optimal.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "package": "com.optimal.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/favicon.png",
+          "resizeMode": "contain"
+        }
+      ],
+      "expo-localization",
+      "expo-image",
+      "expo-asset"
+    ],
+    "scheme": "optimal"
+  }
+}

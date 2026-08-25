@@ -1,0 +1,31 @@
+{
+  "name": "optimal-remittance",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Plateforme Fintech internationale de transfert d'argent (Afrique Centrale vers Maroc)",
+  "scripts": {
+    "dev:backend": "pnpm --filter @optimal/backend run start:dev",
+    "dev:admin": "pnpm --filter @optimal/admin run dev",
+    "dev:mobile": "pnpm --filter @optimal/mobile run start",
+    "build": "pnpm -r run build",
+    "db:generate": "pnpm --filter @optimal/database run generate",
+    "db:push": "pnpm --filter @optimal/database run push",
+    "db:migrate": "pnpm --filter @optimal/database run migrate",
+    "db:seed": "pnpm --filter @optimal/database run seed",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  },
+  "keywords": [
+    "fintech",
+    "remittance",
+    "money-transfer",
+    "nestjs",
+    "react-native",
+    "nextjs",
+    "prisma",
+    "postgresql",
+    "redis"
+  ],
+  "author": "Optimal Team",
+  "license": "UNLICENSED"
+}
