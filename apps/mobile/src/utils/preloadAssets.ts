@@ -56,12 +56,12 @@ export const REMOTE_IMAGE_PRELOADS = [
  */
 export async function preloadAllAppAssets(): Promise<void> {
   try {
-    await Promise.all([
+    await Promise.allSettled([
       // 1. Précharger tous les assets locaux (Images & Vidéos)
-      Asset.loadAsync(CRITICAL_ASSETS),
+      Asset.loadAsync(CRITICAL_ASSETS).catch((e) => console.warn('[Asset Preload] Local assets warning:', e)),
 
       // 2. Pré-mettre en cache les images distantes clés via SDWebImage/Glide
-      ExpoImage.prefetch(REMOTE_IMAGE_PRELOADS, 'memory-disk'),
+      ExpoImage.prefetch(REMOTE_IMAGE_PRELOADS, 'memory-disk').catch((e) => console.warn('[Asset Preload] Remote prefetch warning:', e)),
     ]);
   } catch (error) {
     console.warn('[Asset Preload] Avertissement lors du préchargement des assets:', error);
